@@ -12,7 +12,7 @@ import { invoiceStatus, invoiceTotal } from '../../types';
 type Props = NativeStackScreenProps<InvoicesStackParamList, 'InvoicesList'>;
 
 export default function InvoicesListScreen({ navigation }: Props) {
-  const { invoices, settings, connection, syncing, refreshAll } = useData();
+  const { invoices, settings, syncing, refreshAll, loadError } = useData();
   useAutoRefreshOnFocus();
 
   const sorted = useMemo(
@@ -26,13 +26,12 @@ export default function InvoicesListScreen({ navigation }: Props) {
         data={sorted}
         keyExtractor={(item) => item.id}
         contentContainerStyle={sorted.length === 0 ? styles.flexGrow : styles.list}
-        refreshControl={
-          connection ? (
-            <RefreshControl refreshing={syncing} onRefresh={refreshAll} colors={[colors.primary]} />
-          ) : undefined
-        }
+        refreshControl={<RefreshControl refreshing={syncing} onRefresh={refreshAll} colors={[colors.primary]} />}
         ListEmptyComponent={
-          <EmptyState title="No invoices yet" subtitle="Create your first invoice with the + button." />
+          <EmptyState
+            title={loadError ? 'Could not load invoices' : 'No invoices yet'}
+            subtitle={loadError ?? 'Create your first invoice with the + button.'}
+          />
         }
         renderItem={({ item }) => {
           const total = invoiceTotal(item);

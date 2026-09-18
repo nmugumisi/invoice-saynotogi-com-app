@@ -1,25 +1,12 @@
-import { File, Paths } from 'expo-file-system';
-import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Field, PrimaryButton, SectionTitle } from '../../components/ui';
 import { useData } from '../../context/DataContext';
-import { fetchLiveRates } from '../../lib/exchangeRates';
 import { colors, radius, spacing } from '../../theme';
 import { Settings } from '../../types';
 
 export default function SettingsScreen() {
-  const {
-    settings,
-    updateSettings,
-    connection,
-    connecting,
-    syncing,
-    syncError,
-    connectToApi,
-    disconnectFromApi,
-    refreshAll,
-  } = useData();
+  const { settings, updateSettings, fetchExchangeRates } = useData();
 
   const [fetchingRates, setFetchingRates] = useState(false);
   const [rateStatus, setRateStatus] = useState<string | null>(null);
@@ -30,49 +17,14 @@ export default function SettingsScreen() {
     setDraft(settings);
   }, [settings]);
 
-  const [siteUrl, setSiteUrl] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [connectError, setConnectError] = useState<string | null>(null);
-
   const draftPatch = (patch: Partial<Settings>) => setDraft((prev) => ({ ...prev, ...patch }));
-
-  const pickLogo = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission needed', 'Allow photo library access to choose a logo.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.9,
-    });
-    if (result.canceled || !result.assets?.[0]) return;
-
-    const picked = result.assets[0];
-    try {
-      const ext = picked.uri.split('.').pop()?.split('?')[0] || 'jpg';
-      const source = new File(picked.uri);
-      const dest = new File(Paths.document, `logo.${ext}`);
-      if (dest.exists) dest.delete();
-      await source.copy(dest);
-      await updateSettings({ logoUri: `${dest.uri}?t=${Date.now()}` });
-    } catch {
-      await updateSettings({ logoUri: picked.uri });
-    }
-  };
-
-  const removeLogo = () => updateSettings({ logoUri: null });
 
   const onFetchRates = async () => {
     setFetchingRates(true);
     setRateStatus(null);
     try {
-      const result = await fetchLiveRates();
-      const zarRate = result.zar ?? draft.zarRate;
-      const bwpRate = result.bwp ?? draft.bwpRate;
-      draftPatch({ zarRate, bwpRate });
-      await updateSettings({ zarRate, bwpRate });
-      setRateStatus(`Updated from ${result.source}.`);
+      const { source } = await fetchExchangeRates();
+      setRateStatus(`Updated from ${source}.`);
     } catch (err: any) {
       setRateStatus(err?.message ?? 'Could not fetch rates.');
     } finally {
@@ -91,98 +43,8 @@ export default function SettingsScreen() {
     }
   };
 
-  const onConnect = async () => {
-    if (!siteUrl.trim() || !apiKey.trim()) {
-      setConnectError('Fill in the site URL and API key.');
-      return;
-    }
-    setConnectError(null);
-    try {
-      await connectToApi(siteUrl, apiKey);
-      setApiKey('');
-    } catch (err: any) {
-      setConnectError(err?.message ?? 'Could not connect.');
-    }
-  };
-
-  const onDisconnect = () => {
-    Alert.alert(
-      'Disconnect from WordPress?',
-      'The app will go back to storing invoices, clients, and payment methods only on this device.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Disconnect',
-          style: 'destructive',
-          onPress: () => {
-            disconnectFromApi();
-            setSiteUrl('');
-          },
-        },
-      ],
-    );
-  };
-
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <SectionTitle>Connect to WordPress</SectionTitle>
-      {connection ? (
-        <View style={styles.connectedBox}>
-          <Text style={styles.connectedTitle}>Connected</Text>
-          <Text style={styles.connectedMeta}>{connection.siteUrl}</Text>
-          <Text style={styles.blurb}>
-            Invoices, clients, and payment methods are fetched from and saved directly to this site — the
-            same data wp-admin manages, so both stay in sync.
-          </Text>
-          {syncError ? <Text style={styles.errorText}>{syncError}</Text> : null}
-          <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton title="Refresh Now" onPress={refreshAll} loading={syncing} variant="secondary" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <PrimaryButton title="Disconnect" onPress={onDisconnect} variant="danger" />
-            </View>
-          </View>
-        </View>
-      ) : (
-        <View>
-          <Text style={styles.blurb}>
-            Connect to the Custom Invoices plugin on your WordPress site to fetch existing invoices and
-            manage them from here — changes save straight to the site, so wp-admin sees them too. No
-            WordPress account needed, just the site's own API key.
-          </Text>
-          <Field
-            label="Site URL"
-            value={siteUrl}
-            onChangeText={setSiteUrl}
-            placeholder="https://ngatinyore.co.zw"
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="url"
-          />
-          <Field
-            label="API Key"
-            value={apiKey}
-            onChangeText={setApiKey}
-            placeholder="Paste the key from Invoice Settings → Mobile App"
-            autoCapitalize="none"
-            autoCorrect={false}
-            secureTextEntry
-            hint="On the site: Settings → Invoice Settings → Mobile App."
-          />
-          {connectError ? <Text style={styles.errorText}>{connectError}</Text> : null}
-          <PrimaryButton title="Connect" onPress={onConnect} loading={connecting} />
-          <Pressable
-            onPress={() =>
-              siteUrl.trim() && Linking.openURL(`${siteUrl.trim().replace(/\/+$/, '')}/wp-admin/options-general.php?page=ci-invoice-settings`)
-            }
-            style={{ marginTop: spacing.sm }}
-          >
-            <Text style={styles.linkText}>Open Invoice Settings to get the key →</Text>
-          </Pressable>
-        </View>
-      )}
-
       <SectionTitle>Business Details</SectionTitle>
       <Text style={styles.blurb}>Shown at the top of every invoice — logo, name, address, contact.</Text>
 
@@ -194,17 +56,9 @@ export default function SettingsScreen() {
             <Text style={styles.logoPlaceholder}>No logo</Text>
           )}
         </View>
-        {connection ? (
-          <Text style={[styles.blurb, { flex: 1, marginBottom: 0 }]}>
-            Change the logo from the site's Business Details page in wp-admin — uploading isn't supported
-            from the app yet.
-          </Text>
-        ) : (
-          <View style={{ flex: 1, gap: spacing.sm }}>
-            <PrimaryButton title="Select Logo" onPress={pickLogo} variant="secondary" />
-            {draft.logoUri ? <PrimaryButton title="Remove" onPress={removeLogo} variant="danger" /> : null}
-          </View>
-        )}
+        <Text style={[styles.blurb, { flex: 1, marginBottom: 0 }]}>
+          Logo can't be changed from the app yet.
+        </Text>
       </View>
 
       <Field label="Company / Your Name" value={draft.companyName} onChangeText={(v) => draftPatch({ companyName: v })} />
@@ -303,16 +157,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: spacing.lg, paddingBottom: spacing.xl * 2 },
   blurb: { fontSize: 12.5, color: colors.textMuted, marginBottom: spacing.md, marginTop: -4 },
-  errorText: { fontSize: 12.5, color: colors.danger, marginBottom: spacing.sm },
-  linkText: { fontSize: 12.5, color: colors.primary, fontWeight: '600' },
-  connectedBox: {
-    backgroundColor: colors.primaryLight,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-  },
-  connectedTitle: { fontSize: 14, fontWeight: '700', color: colors.primaryDark },
-  connectedMeta: { fontSize: 12.5, color: colors.text, marginTop: 2 },
   logoRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg, alignItems: 'center' },
   logoPreview: {
     width: 96,

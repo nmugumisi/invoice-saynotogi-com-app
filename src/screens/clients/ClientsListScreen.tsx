@@ -10,7 +10,7 @@ import { colors, spacing } from '../../theme';
 type Props = NativeStackScreenProps<ClientsStackParamList, 'ClientsList'>;
 
 export default function ClientsListScreen({ navigation }: Props) {
-  const { clients, connection, syncing, refreshAll } = useData();
+  const { clients, syncing, refreshAll, loadError } = useData();
   useAutoRefreshOnFocus();
 
   return (
@@ -19,15 +19,11 @@ export default function ClientsListScreen({ navigation }: Props) {
         data={clients}
         keyExtractor={(item) => item.id}
         contentContainerStyle={clients.length === 0 ? styles.flexGrow : styles.list}
-        refreshControl={
-          connection ? (
-            <RefreshControl refreshing={syncing} onRefresh={refreshAll} colors={[colors.primary]} />
-          ) : undefined
-        }
+        refreshControl={<RefreshControl refreshing={syncing} onRefresh={refreshAll} colors={[colors.primary]} />}
         ListEmptyComponent={
           <EmptyState
-            title="No clients yet"
-            subtitle="Add a client to reuse their details on invoices."
+            title={loadError ? 'Could not load clients' : 'No clients yet'}
+            subtitle={loadError ?? 'Add a client to reuse their details on invoices.'}
           />
         }
         renderItem={({ item }) => (

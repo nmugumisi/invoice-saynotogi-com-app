@@ -10,7 +10,7 @@ import { colors, spacing } from '../../theme';
 type Props = NativeStackScreenProps<PaymentMethodsStackParamList, 'PaymentMethodsList'>;
 
 export default function PaymentMethodsListScreen({ navigation }: Props) {
-  const { paymentMethods, connection, syncing, refreshAll } = useData();
+  const { paymentMethods, syncing, refreshAll, loadError } = useData();
   useAutoRefreshOnFocus();
 
   return (
@@ -19,15 +19,11 @@ export default function PaymentMethodsListScreen({ navigation }: Props) {
         data={paymentMethods}
         keyExtractor={(item) => item.id}
         contentContainerStyle={paymentMethods.length === 0 ? styles.flexGrow : styles.list}
-        refreshControl={
-          connection ? (
-            <RefreshControl refreshing={syncing} onRefresh={refreshAll} colors={[colors.primary]} />
-          ) : undefined
-        }
+        refreshControl={<RefreshControl refreshing={syncing} onRefresh={refreshAll} colors={[colors.primary]} />}
         ListEmptyComponent={
           <EmptyState
-            title="No payment methods yet"
-            subtitle="Add bank transfer, mobile money, or other details to show on invoices."
+            title={loadError ? 'Could not load payment methods' : 'No payment methods yet'}
+            subtitle={loadError ?? 'Add bank transfer, mobile money, or other details to show on invoices.'}
           />
         }
         renderItem={({ item }) => (
