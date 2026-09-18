@@ -1,14 +1,26 @@
 # Invoices
 
-An Android invoicing app built with React Native (Expo), covering the same
-functionality as the [Custom Invoices WordPress plugin](https://ngatinyore.co.zw)
-in [`invoice-saynotogi-com-api`](../invoice-saynotogi-com-api): business
-details, clients, payment methods, and invoices with line items, currency
-conversion (ZAR/BWP), and a printable invoice layout — all stored locally on
-the device.
+An Android invoicing app built with React Native (Expo). It is the mobile
+front end for the Custom Invoices WordPress plugin in
+[`invoice-saynotogi-com-api`](../invoice-saynotogi-com-api) — invoices,
+clients, payment methods and business settings all live on that site and are
+read and written over its REST API, so the app and wp-admin show the same
+data at all times.
 
 - **App name:** Invoices
 - **Package:** `com.saynotogi.invoice.app`
+
+## Setup
+
+There is none, by design: no sign-in, no connect screen, nothing for the
+user to enter. The backend URL and API key are build-time constants in
+`src/config.ts`, and the same key ships inside the plugin, so installing the
+plugin and installing the app is the whole story.
+
+`src/config.ts` is git-ignored because this repo is public and that key
+grants full read/write access to invoice and client data. Copy
+`src/config.example.ts` to `src/config.ts` and fill in the key from the
+plugin's `includes/ci-api-key.php` before building.
 
 ## Features
 
@@ -20,17 +32,21 @@ the device.
   their name/address/email/phone onto the invoice.
 - **Payment methods** — reusable, orderable payment detail blocks (bank
   transfer, mobile money, etc.) to select per invoice.
-- **Settings** — company logo/name/address/contact, invoice numbering
-  defaults, currency symbol/code, default notes, and exchange rates (manual
-  entry or fetched live from the same fallback feeds as the plugin).
+- **Settings** — business details, invoice numbering defaults, currency,
+  default notes, and exchange rates. Rates are fetched by the site itself
+  (`POST /settings/fetch-rates`), so the app never calls a third-party
+  service directly.
 - **Invoice preview** — a native rendering of the invoice matching the
   plugin's printable layout, with Print and Share-as-PDF actions.
+
+Lists refresh when a screen regains focus and support pull-to-refresh, so
+edits made in wp-admin or on another device show up without any action.
 
 ## Tech
 
 Expo SDK 57 + TypeScript, React Navigation (bottom tabs + native stacks),
-local storage via `@react-native-async-storage/async-storage`, PDF/print via
-`expo-print` + `expo-sharing`.
+PDF/print via `expo-print` + `expo-sharing`. No on-device database — the
+site is the single source of truth.
 
 ## Development
 
@@ -43,8 +59,10 @@ npm run android   # or: npm run web
 
 ```bash
 npx expo prebuild -p android
-npx eas build -p android --profile preview
+cd android && ./gradlew assembleRelease
 ```
 
-(or `expo run:android` for a local debug build with Android Studio / an
-emulator installed).
+The APK lands in `android/app/build/outputs/apk/release/`. A debug build
+(`assembleDebug`) does **not** embed the JS bundle and will hang on the
+splash screen unless Metro is running — use the release build for a
+standalone install.
