@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Holds the backend API key — this repo is public (see config.example.ts)
+/src/config.ts
