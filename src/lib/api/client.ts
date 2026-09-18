@@ -1,9 +1,6 @@
-import { base64Encode } from './base64';
-
 export interface ApiConfig {
   siteUrl: string;
-  username: string;
-  appPassword: string;
+  apiKey: string;
 }
 
 export interface ApiClientDto {
@@ -84,7 +81,6 @@ async function request<T>(
   // path — never triggers a canonical redirect that would drop CORS
   // headers or strip the Authorization header on browser-based clients.
   const url = `${normalizeSiteUrl(config.siteUrl)}/index.php?rest_route=/custom-invoices/v1${path}`;
-  const token = base64Encode(`${config.username}:${config.appPassword}`);
 
   let response: Response;
   try {
@@ -92,7 +88,7 @@ async function request<T>(
       method: options.method ?? 'GET',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Basic ${token}`,
+        'X-CI-API-Key': config.apiKey,
       },
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     });

@@ -17,7 +17,6 @@ import { Client, DEFAULT_SETTINGS, Invoice, PaymentMethod, Settings } from '../t
 
 export interface ConnectionInfo {
   siteUrl: string;
-  username: string;
 }
 
 interface DataContextValue {
@@ -31,7 +30,7 @@ interface DataContextValue {
   connecting: boolean;
   syncing: boolean;
   syncError: string | null;
-  connectToApi: (siteUrl: string, username: string, appPassword: string) => Promise<void>;
+  connectToApi: (siteUrl: string, apiKey: string) => Promise<void>;
   disconnectFromApi: () => Promise<void>;
   refreshAll: () => Promise<void>;
 
@@ -98,7 +97,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const saved = await loadConnection();
       if (saved) {
         apiConfigRef.current = saved;
-        setConnection({ siteUrl: saved.siteUrl, username: saved.username });
+        setConnection({ siteUrl: saved.siteUrl });
         try {
           await loadFromApi(saved);
         } catch (err: any) {
@@ -112,15 +111,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [loadFromApi, loadFromLocalStorage]);
 
   const connectToApi = useCallback(
-    async (siteUrl: string, username: string, appPassword: string) => {
-      const config: ApiConfig = { siteUrl: siteUrl.trim(), username: username.trim(), appPassword: appPassword.trim() };
+    async (siteUrl: string, apiKey: string) => {
+      const config: ApiConfig = { siteUrl: siteUrl.trim(), apiKey: apiKey.trim() };
       setConnecting(true);
       setSyncError(null);
       try {
         await wpApi.testConnection(config);
         await saveConnection(config);
         apiConfigRef.current = config;
-        setConnection({ siteUrl: config.siteUrl, username: config.username });
+        setConnection({ siteUrl: config.siteUrl });
         await loadFromApi(config);
       } finally {
         setConnecting(false);

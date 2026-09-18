@@ -31,8 +31,7 @@ export default function SettingsScreen() {
   }, [settings]);
 
   const [siteUrl, setSiteUrl] = useState('');
-  const [username, setUsername] = useState('');
-  const [appPassword, setAppPassword] = useState('');
+  const [apiKey, setApiKey] = useState('');
   const [connectError, setConnectError] = useState<string | null>(null);
 
   const draftPatch = (patch: Partial<Settings>) => setDraft((prev) => ({ ...prev, ...patch }));
@@ -93,14 +92,14 @@ export default function SettingsScreen() {
   };
 
   const onConnect = async () => {
-    if (!siteUrl.trim() || !username.trim() || !appPassword.trim()) {
-      setConnectError('Fill in the site URL, username, and application password.');
+    if (!siteUrl.trim() || !apiKey.trim()) {
+      setConnectError('Fill in the site URL and API key.');
       return;
     }
     setConnectError(null);
     try {
-      await connectToApi(siteUrl, username, appPassword);
-      setAppPassword('');
+      await connectToApi(siteUrl, apiKey);
+      setApiKey('');
     } catch (err: any) {
       setConnectError(err?.message ?? 'Could not connect.');
     }
@@ -118,7 +117,6 @@ export default function SettingsScreen() {
           onPress: () => {
             disconnectFromApi();
             setSiteUrl('');
-            setUsername('');
           },
         },
       ],
@@ -132,7 +130,6 @@ export default function SettingsScreen() {
         <View style={styles.connectedBox}>
           <Text style={styles.connectedTitle}>Connected</Text>
           <Text style={styles.connectedMeta}>{connection.siteUrl}</Text>
-          <Text style={styles.connectedMeta}>as {connection.username}</Text>
           <Text style={styles.blurb}>
             Invoices, clients, and payment methods are fetched from and saved directly to this site — the
             same data wp-admin manages, so both stay in sync.
@@ -151,7 +148,8 @@ export default function SettingsScreen() {
         <View>
           <Text style={styles.blurb}>
             Connect to the Custom Invoices plugin on your WordPress site to fetch existing invoices and
-            manage them from here — changes save straight to the site, so wp-admin sees them too.
+            manage them from here — changes save straight to the site, so wp-admin sees them too. No
+            WordPress account needed, just the site's own API key.
           </Text>
           <Field
             label="Site URL"
@@ -163,30 +161,24 @@ export default function SettingsScreen() {
             keyboardType="url"
           />
           <Field
-            label="Username"
-            value={username}
-            onChangeText={setUsername}
-            placeholder="admin"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <Field
-            label="Application Password"
-            value={appPassword}
-            onChangeText={setAppPassword}
-            placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
+            label="API Key"
+            value={apiKey}
+            onChangeText={setApiKey}
+            placeholder="Paste the key from Invoice Settings → Mobile App"
             autoCapitalize="none"
             autoCorrect={false}
             secureTextEntry
-            hint="Users → your profile → Application Passwords on the site, not your login password."
+            hint="On the site: Settings → Invoice Settings → Mobile App."
           />
           {connectError ? <Text style={styles.errorText}>{connectError}</Text> : null}
           <PrimaryButton title="Connect" onPress={onConnect} loading={connecting} />
           <Pressable
-            onPress={() => siteUrl.trim() && Linking.openURL(`${siteUrl.trim().replace(/\/+$/, '')}/wp-admin/profile.php`)}
+            onPress={() =>
+              siteUrl.trim() && Linking.openURL(`${siteUrl.trim().replace(/\/+$/, '')}/wp-admin/options-general.php?page=ci-invoice-settings`)
+            }
             style={{ marginTop: spacing.sm }}
           >
-            <Text style={styles.linkText}>Open your profile page to create one →</Text>
+            <Text style={styles.linkText}>Open Invoice Settings to get the key →</Text>
           </Pressable>
         </View>
       )}
