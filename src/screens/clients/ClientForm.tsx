@@ -17,6 +17,8 @@ export default function ClientFormScreen({ route, navigation }: Props) {
   const [address, setAddress] = useState(existing?.address ?? '');
   const [email, setEmail] = useState(existing?.email ?? '');
   const [phone, setPhone] = useState(existing?.phone ?? '');
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useLayoutEffect(() => {
     navigation.setOptions({ title: existing ? 'Edit Client' : 'New Client' });
@@ -24,14 +26,21 @@ export default function ClientFormScreen({ route, navigation }: Props) {
 
   const canSave = name.trim().length > 0;
 
-  const onSave = () => {
+  const onSave = async () => {
     const payload = { name: name.trim(), address: address.trim(), email: email.trim(), phone: phone.trim() };
-    if (existing) {
-      updateClient(existing.id, payload);
-    } else {
-      addClient(payload);
+    setSaving(true);
+    try {
+      if (existing) {
+        await updateClient(existing.id, payload);
+      } else {
+        await addClient(payload);
+      }
+      navigation.goBack();
+    } catch (err: any) {
+      Alert.alert('Could not save client', err?.message ?? 'Unknown error.');
+    } finally {
+      setSaving(false);
     }
-    navigation.goBack();
   };
 
   const onDelete = () => {
@@ -41,9 +50,16 @@ export default function ClientFormScreen({ route, navigation }: Props) {
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () => {
-          deleteClient(existing.id);
-          navigation.goBack();
+        onPress: async () => {
+          setDeleting(true);
+          try {
+            await deleteClient(existing.id);
+            navigation.goBack();
+          } catch (err: any) {
+            Alert.alert('Could not delete client', err?.message ?? 'Unknown error.');
+          } finally {
+            setDeleting(false);
+          }
         },
       },
     ]);
@@ -70,11 +86,11 @@ export default function ClientFormScreen({ route, navigation }: Props) {
       <Field label="Phone" value={phone} onChangeText={setPhone} placeholder="+263 ..." keyboardType="phone-pad" />
 
       <View style={{ marginTop: spacing.md }}>
-        <PrimaryButton title="Save Client" onPress={onSave} disabled={!canSave} />
+        <PrimaryButton title="Save Client" onPress={onSave} disabled={!canSave || saving} loading={saving} />
       </View>
       {existing ? (
         <View style={{ marginTop: spacing.sm }}>
-          <PrimaryButton title="Delete Client" onPress={onDelete} variant="danger" />
+          <PrimaryButton title="Delete Client" onPress={onDelete} variant="danger" loading={deleting} />
         </View>
       ) : null}
     </ScrollView>

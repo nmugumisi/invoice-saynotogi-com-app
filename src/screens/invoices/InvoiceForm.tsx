@@ -48,6 +48,8 @@ export default function InvoiceFormScreen({ route, navigation }: Props) {
   const [clientPickerOpen, setClientPickerOpen] = useState(false);
   const [methodPickerOpen, setMethodPickerOpen] = useState(false);
   const [datePickerFor, setDatePickerFor] = useState<'date' | 'dueDate' | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useLayoutEffect(() => {
     navigation.setOptions({ title: existing ? `Edit ${existing.number}` : 'New Invoice' });
@@ -79,7 +81,7 @@ export default function InvoiceFormScreen({ route, navigation }: Props) {
 
   const canSave = number.trim().length > 0 && !!clientId;
 
-  const onSave = () => {
+  const onSave = async () => {
     if (!clientId || !client) {
       Alert.alert('Select a client', 'Choose who this invoice is billed to.');
       return;
@@ -110,12 +112,19 @@ export default function InvoiceFormScreen({ route, navigation }: Props) {
       bwpRateUsed: showBwp && settings.bwpRate ? settings.bwpRate : null,
     };
 
-    if (existing) {
-      updateInvoice(existing.id, payload);
-      navigation.replace('InvoicePreview', { invoiceId: existing.id });
-    } else {
-      const created = addInvoice(payload);
-      navigation.replace('InvoicePreview', { invoiceId: created.id });
+    setSaving(true);
+    try {
+      if (existing) {
+        await updateInvoice(existing.id, payload);
+        navigation.replace('InvoicePreview', { invoiceId: existing.id });
+      } else {
+        const created = await addInvoice(payload);
+        navigation.replace('InvoicePreview', { invoiceId: created.id });
+      }
+    } catch (err: any) {
+      Alert.alert('Could not save invoice', err?.message ?? 'Unknown error.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -126,9 +135,16 @@ export default function InvoiceFormScreen({ route, navigation }: Props) {
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () => {
-          deleteInvoice(existing.id);
-          navigation.popToTop();
+        onPress: async () => {
+          setDeleting(true);
+          try {
+            await deleteInvoice(existing.id);
+            navigation.popToTop();
+          } catch (err: any) {
+            Alert.alert('Could not delete invoice', err?.message ?? 'Unknown error.');
+          } finally {
+            setDeleting(false);
+          }
         },
       },
     ]);
@@ -308,11 +324,11 @@ export default function InvoiceFormScreen({ route, navigation }: Props) {
         </Pressable>
 
         <View style={{ marginTop: spacing.lg }}>
-          <PrimaryButton title="Save Invoice" onPress={onSave} disabled={!canSave} />
+          <PrimaryButton title="Save Invoice" onPress={onSave} disabled={!canSave || saving} loading={saving} />
         </View>
         {existing ? (
           <View style={{ marginTop: spacing.sm }}>
-            <PrimaryButton title="Delete Invoice" onPress={onDelete} variant="danger" />
+            <PrimaryButton title="Delete Invoice" onPress={onDelete} variant="danger" loading={deleting} />
           </View>
         ) : null}
       </ScrollView>

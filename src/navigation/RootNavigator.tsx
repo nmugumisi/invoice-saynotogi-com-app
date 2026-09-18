@@ -1,7 +1,7 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
-import { Text } from 'react-native';
 import ClientFormScreen from '../screens/clients/ClientForm';
 import ClientsListScreen from '../screens/clients/ClientsListScreen';
 import InvoiceFormScreen from '../screens/invoices/InvoiceForm';
@@ -84,10 +84,16 @@ function SettingsStackNavigator() {
   );
 }
 
-function TabIcon({ symbol, focused }: { symbol: string; focused: boolean }) {
-  return (
-    <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>{symbol}</Text>
-  );
+function TabIcon({
+  name,
+  color,
+  size,
+}: {
+  name: React.ComponentProps<typeof MaterialIcons>['name'];
+  color: string;
+  size: number;
+}) {
+  return <MaterialIcons name={name} color={color} size={size} />;
 }
 
 export default function RootNavigator() {
@@ -105,7 +111,7 @@ export default function RootNavigator() {
         component={InvoicesStackNavigator}
         options={{
           title: 'Invoices',
-          tabBarIcon: ({ focused }) => <TabIcon symbol="🧾" focused={focused} />,
+          tabBarIcon: ({ color, size }) => <TabIcon name="receipt-long" color={color} size={size} />,
         }}
       />
       <Tab.Screen
@@ -113,7 +119,7 @@ export default function RootNavigator() {
         component={ClientsStackNavigator}
         options={{
           title: 'Clients',
-          tabBarIcon: ({ focused }) => <TabIcon symbol="👤" focused={focused} />,
+          tabBarIcon: ({ color, size }) => <TabIcon name="people" color={color} size={size} />,
         }}
       />
       <Tab.Screen
@@ -121,7 +127,7 @@ export default function RootNavigator() {
         component={PaymentMethodsStackNavigator}
         options={{
           title: 'Payments',
-          tabBarIcon: ({ focused }) => <TabIcon symbol="💳" focused={focused} />,
+          tabBarIcon: ({ color, size }) => <TabIcon name="payments" color={color} size={size} />,
         }}
       />
       <Tab.Screen
@@ -129,7 +135,7 @@ export default function RootNavigator() {
         component={SettingsStackNavigator}
         options={{
           title: 'Settings',
-          tabBarIcon: ({ focused }) => <TabIcon symbol="⚙️" focused={focused} />,
+          tabBarIcon: ({ color, size }) => <TabIcon name="settings" color={color} size={size} />,
         }}
       />
     </Tab.Navigator>

@@ -1,15 +1,17 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { EmptyState } from '../../components/ui';
 import { useData } from '../../context/DataContext';
+import { useAutoRefreshOnFocus } from '../../lib/useAutoRefresh';
 import { ClientsStackParamList } from '../../navigation/types';
 import { colors, spacing } from '../../theme';
 
 type Props = NativeStackScreenProps<ClientsStackParamList, 'ClientsList'>;
 
 export default function ClientsListScreen({ navigation }: Props) {
-  const { clients } = useData();
+  const { clients, connection, syncing, refreshAll } = useData();
+  useAutoRefreshOnFocus();
 
   return (
     <View style={styles.container}>
@@ -17,6 +19,11 @@ export default function ClientsListScreen({ navigation }: Props) {
         data={clients}
         keyExtractor={(item) => item.id}
         contentContainerStyle={clients.length === 0 ? styles.flexGrow : styles.list}
+        refreshControl={
+          connection ? (
+            <RefreshControl refreshing={syncing} onRefresh={refreshAll} colors={[colors.primary]} />
+          ) : undefined
+        }
         ListEmptyComponent={
           <EmptyState
             title="No clients yet"

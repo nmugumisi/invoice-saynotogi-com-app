@@ -1,9 +1,10 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useMemo } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { EmptyState, StatusBadge } from '../../components/ui';
 import { useData } from '../../context/DataContext';
 import { fmtMoney, formatDate } from '../../lib/money';
+import { useAutoRefreshOnFocus } from '../../lib/useAutoRefresh';
 import { InvoicesStackParamList } from '../../navigation/types';
 import { colors, spacing } from '../../theme';
 import { invoiceStatus, invoiceTotal } from '../../types';
@@ -11,7 +12,8 @@ import { invoiceStatus, invoiceTotal } from '../../types';
 type Props = NativeStackScreenProps<InvoicesStackParamList, 'InvoicesList'>;
 
 export default function InvoicesListScreen({ navigation }: Props) {
-  const { invoices, settings } = useData();
+  const { invoices, settings, connection, syncing, refreshAll } = useData();
+  useAutoRefreshOnFocus();
 
   const sorted = useMemo(
     () => [...invoices].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
@@ -24,6 +26,11 @@ export default function InvoicesListScreen({ navigation }: Props) {
         data={sorted}
         keyExtractor={(item) => item.id}
         contentContainerStyle={sorted.length === 0 ? styles.flexGrow : styles.list}
+        refreshControl={
+          connection ? (
+            <RefreshControl refreshing={syncing} onRefresh={refreshAll} colors={[colors.primary]} />
+          ) : undefined
+        }
         ListEmptyComponent={
           <EmptyState title="No invoices yet" subtitle="Create your first invoice with the + button." />
         }
